@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Heart Disease LLM Analytics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="page">
+    <header class="hero">
+        <div>
+            <p class="eyebrow">Flask + Groq API + pandas/sklearn</p>
+            <h1>Аналитический агент по датасету Heart Disease</h1>
+            <p class="subtitle">Приложение считает метрики и графики на backend, затем передает агрегированные результаты LLM-агенту для интерпретации.</p>
+        </div>
+    </header>
+
+    {% if error %}
+        <section class="card error"><strong>Ошибка:</strong> {{ error }}</section>
+    {% endif %}
+
+    <section class="grid two">
+        <div class="card">
+            <h2>Запуск анализа</h2>
+
+            {% if llm_status.configured %}
+                <div class="status good">Groq API key найден. Модель: {{ llm_status.model }}</div>
+            {% else %}
+                <div class="status warn">GROQ_API_KEY не найден. Будет показан локальный fallback-отчет.</div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data">
+                <label>Загрузить CSV, если хочешь заменить встроенный heart.csv</label>
+                <input type="file" name="dataset" accept=".csv">
+
+                <label>Вопрос агенту</label>
+                <textarea name="question" rows="6">{{ question }}</textarea>
+
+                <button type="submit">Сформировать LLM-отчет</button>
+            </form>
+            <p class="hint">После нажатия отчет появится в отдельном блоке сразу под краткой сводкой.</p>
+        </div>
+
+        {% if summary %}
+        <div class="card">
+            <h2>Кратко о данных</h2>
+            <div class="stats">
+                <div><span>{{ summary.shape.rows }}</span><small>строк</small></div>
+                <div><span>{{ summary.shape.columns }}</span><small>столбцов</small></div>
+                <div><span>{{ summary.duplicate_rows }}</span><small>дубликатов</small></div>
+            </div>
+            <h3>Target distribution</h3>
+            <pre>{{ summary.target_counts }}</pre>
+            <h3>Missing values</h3>
+            <pre>{{ summary.missing_values }}</pre>
+        </div>
+        {% endif %}
+    </section>
+
+    {% if report %}
+    <section class="card report">
+        <div class="report-head">
+            <h2>Отчет аналитического агента</h2>
+            <div class="badge">{{ llm_status.provider }} · mode: {{ mode }}</div>
+        </div>
+        <p class="hint">Выбранные backend-инструменты: {{ selected_tools }}</p>
+        <div class="markdown">{{ report | replace('\n', '<br>') | safe }}</div>
+    </section>
+    {% endif %}
+
+    {% if charts %}
+    <section class="card">
+        <h2>Автоматические графики</h2>
+        <div class="charts">
+            <figure><img src="data:image/png;base64,{{ charts.target_distribution }}"><figcaption>Баланс классов</figcaption></figure>
+            <figure><img src="data:image/png;base64,{{ charts.age_by_target }}"><figcaption>Возраст по target</figcaption></figure>
+            <figure><img src="data:image/png;base64,{{ charts.correlation_matrix }}"><figcaption>Корреляционная матрица</figcaption></figure>
+            <figure><img src="data:image/png;base64,{{ charts.feature_importance }}"><figcaption>Важность признаков</figcaption></figure>
+        </div>
+    </section>
+    {% endif %}
+</div>
+</body>
+</html>
